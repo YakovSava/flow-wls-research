@@ -151,7 +151,7 @@ keep the amplification bounded, where interpolating Adams-Bashforth does not. Th
 comparison with AB-6, not with Euler, and should be read in that sense.
 
 
-### E2 - end-to-end on Anima (12 units: 4 prompts x 3 seeds, 10 and 16 steps)
+### E2 - end-to-end on Anima, budgets 10 and 16 (12 units: 4 prompts x 3 seeds; run first, exploratory)
 
 **Status update (2026-11-03, after E2/E3):** all experiments of the protocol have finished. Full tables:
 `results/end_to_end_10_16.md`, `results/perceptual_10_16.md`; raw latents are not versioned (`dumps/`).
@@ -162,9 +162,10 @@ Bars: relative RMS error of the final latent against the converged bf16 solution
 over 12 units, whiskers are standard errors. Black ticks: the quantization floor (converged quantized
 model against converged bf16). AB-4 at 10 steps is clipped by the axis (true values 1.3-1.9).
 
-Deviation from the registered protocol: the budgets are **10 and 16 steps**, not the 8 and 12 written in
-H3/H4. The verdicts below are therefore about 10 and 16 steps. The reference is converged: two
-independent 96-step solvers (ab3 and wls5) differ by 1.7% on the one pair where both were run.
+This run used **10 and 16 steps**, not the 8 and 12 registered in H3/H4 (the reason for the change is not
+recorded). The registered budgets were run afterwards, see E2' below; the verdicts in this section are
+about 10 and 16 steps only. The reference is converged: two independent 96-step solvers (ab3 and wls5)
+differ by 1.7% on the one pair where both were run.
 
 Total error, mean of 12 units (selected columns):
 
@@ -211,6 +212,53 @@ Not answered by the data and worth saying: for 4-bit models the solver error aga
 converged solution is lower than for bf16 (nvfp4_w 0.36 against 0.55 at 16 steps). I do not have an
 explanation (a smoother effective field is a guess, not a result).
 
+### E2' - the registered budgets, 8 and 12 steps (same 12 units, confirmatory)
+
+![end to end 8/12](figures/end_to_end_8_12.png)
+
+Tables: `results/end_to_end_8_12.md`. Total error against converged bf16, mean of 12 units:
+
+| steps | method | bf16 | fp8_w | fp8_wa | int8_wa | int4_w | int4_wa8 | nvfp4_w |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 8 | euler | **0.750** | **0.717** | **0.745** | **0.734** | **0.787** | **0.775** | **0.686** |
+| 8 | ab4 | 2.269 | 2.143 | 2.902 | 2.727 | 2.285 | 2.859 | 1.955 |
+| 8 | wls8 | 1.123 | 1.105 | 1.131 | 1.112 | 1.084 | 1.057 | 1.022 |
+| 8 | dynamic | 0.848 | 0.834 | 0.863 | 0.868 | 0.849 | 0.851 | 0.725 |
+| 12 | euler | **0.630** | **0.593** | **0.622** | **0.611** | **0.671** | **0.666** | **0.641** |
+| 12 | ab3 | 0.649 | 0.616 | 0.695 | 0.671 | 0.681 | 0.710 | 0.656 |
+| 12 | ab4 | 0.991 | 0.958 | 1.342 | 1.240 | 1.110 | 1.413 | 0.928 |
+| 12 | wls8 | 0.828 | 0.799 | 0.836 | 0.819 | 0.824 | 0.817 | 0.739 |
+| 12 | dynamic | 0.705 | 0.679 | 0.710 | 0.699 | 0.693 | 0.677 | 0.672 |
+
+Plain Euler has the lowest mean error in every format at both budgets. Verdicts on the registered
+hypotheses:
+
+* **H3: supported, for activation quantization (and INT4 weights at 12 steps).** AB-4 minus WLS-8 extra
+  error from quantization is positive with an interval excluding 0 in 7 of 10 cells for the aggressive
+  formats: 8 steps fp8_wa +0.63, int8_wa +0.47, int4_wa8 +0.66; 12 steps fp8_wa +0.34, int8_wa +0.26,
+  int4_w +0.12, int4_wa8 +0.43. One cell goes the other way (nvfp4_w at 8 steps, -0.21) and two are
+  inconclusive (int4_w at 8, nvfp4_w at 12). Weight-only fp8_w: -0.11 at 8 steps, inconclusive at 12.
+* **H4: supported, 12 of 12 cells.** WLS-8 is better than AB-4 in every format at both budgets
+  (differences -0.93 to -1.80 at 8 steps, -0.16 to -0.60 at 12). As in the 10/16 run this is a win over an
+  unstable baseline: **WLS-8 is significantly worse than Euler in 14 of 14 cells** (+0.10 to +0.39) and at
+  8 steps its error exceeds 1 in bf16 as well.
+* **H5: supported (null result), with a marginal regret.** The dynamic rule is not better than the best
+  fixed rule (AB-3, WLS-5 in one cell) in 11 of 14 cells (interval includes 0 or is positive); it is
+  better in 3 (fp8_wa and int4_wa8 at 8 steps, int4_wa8 at 12) and clearly worse in 4 (bf16 and fp8_w at
+  both budgets, +0.03 to +0.06). Regret against the best fixed rule is at most 8.6% except fp8_w at 12
+  steps, 10.1%, just over the registered limit. Against plain Euler (not part of the registered
+  "fixed rule" set) the dynamic rule is worse in all 14 cells on the mean (+0.01 to +0.14).
+* **H6: refuted for INT4, supported for NVFP4 at 12 steps.** Floor over the 12-step solver error of the
+  best fixed rule: int4_w 0.92, int4_wa8 0.84, nvfp4_w 1.59 (8-bit formats 0.24-0.40). Together with the
+  16-step ratios (1.16, 1.09, 1.66) the INT4 floor is about equal to the discretization error
+  of a 12-16 step sampler and crosses 1 between the two budgets; only the NVFP4 floor is
+  clearly above it at every budget.
+
+A side observation, not explained: for nvfp4_w (and fp8_w at 8 steps) the *extra* error of AB-4 is
+negative, i.e. the quantized model is easier for AB-4 than bf16 (8 steps: -0.31 for nvfp4_w), and the
+same quantized models have lower solver error against their own converged solution than bf16 has.
+It looks like quantization makes the sampled trajectory less stiff; I have not tested this.
+
 ### E3 - image space (SSIM and LPIPS-alex of the decoded image against the decoded converged bf16)
 
 Latents decoded with the Qwen-Image VAE (tiled, tile 32 latent px, overlap 8, identical for every image).
@@ -223,23 +271,35 @@ image-space picture repeats the latent one; for INT4 all samplers lose about the
 for the 16-step solver error in bf16: the same picture as H6. No confidence intervals were computed for
 the image metrics, only means.
 
+Registered budgets (`results/perceptual_8_12.md`): the image metrics agree with the latent ones. AB-4 is
+worst by a wide margin (LPIPS 0.71-0.81), WLS-8 is behind Euler and AB-3 (LPIPS 0.57-0.74 against
+0.43-0.69), and Euler and AB-3 trade places by format: SSIM is highest for Euler in all seven formats at
+8 steps; at 12 steps LPIPS favours AB-3 for bf16, fp8_w, int4_w and nvfp4_w and Euler for the
+activation-quantized formats.
+
 ### Conclusions
 
 1. The "multistep methods are especially sensitive to quantization" claim is **true for AB-4 and only for
-   activation-quantized formats**, where the error is nearly white in time (lag-1 cosine 0.08-0.13). For
-   4-bit weight-only formats the error is temporally correlated and spatially smooth, and the samplers
-   are hurt about equally (extra error at 16 steps: Euler +0.075, AB-4 +0.106, WLS-8 +0.057 for int4_w),
-   i.e. the loss there is the floor, not an interaction with the multistep history.
-2. Flow-WLS (WLS-8) is **robust**: its extra error from any format is within +-0.06 of its bf16 error.
-   But it is robust at a price: it is **worse than Euler and AB-3** on this model at 10-16 steps, with or
-   without quantization. The robustness is the bounded noise gain, not better accuracy.
+   activation-quantized formats**, where the error is nearly white in time (lag-1 cosine 0.08-0.13); it
+   holds at 8, 10, 12 and 16 steps. For 4-bit weight-only formats the error is temporally correlated and
+   spatially smooth, and the samplers are hurt about equally (extra error at 16 steps: Euler +0.075,
+   AB-4 +0.106, WLS-8 +0.057 for int4_w), i.e. the loss there is the floor, not an interaction with
+   the multistep history.
+2. Flow-WLS (WLS-8) is **robust**: its extra error from any format stays within +-0.11 of its bf16 error
+   at all four budgets (the largest deviation is an improvement, nvfp4_w at 8 steps). But it is robust at a price: it is **worse than plain Euler** in 27 of 28
+   (format x budget) cells and worse than AB-3 as well, with or without quantization. The robustness is
+   the bounded noise gain, not better accuracy. At 8 and 12 steps on this model, in this metric, Euler is
+   the best of the six rules for every format; AB-3 pulls slightly ahead only at 16 steps for the formats
+   without activation quantization.
 3. A dynamic regularization chosen by rolling-origin validation (no extra network calls) is competitive
-   with the best fixed rule and better at 10 steps, but does not turn quantization noise into a gain:
-   the quantization error that remains is the floor, and for INT4-class formats the floor is as large
-   as or larger than the discretization error of a 16-step sampler. Better integrators cannot recover
-   that part.
+   with the best fixed multistep rule (null result for H5, regret up to 10%) and better than it at some
+   10-step cells, but it does not turn quantization noise into a gain and never beats Euler at 8 and 12
+   steps. The quantization error that remains is the floor, and the floor of NVFP4 exceeds the
+   discretization error of a 12-16 step sampler, that of INT4 is comparable to it. A better integrator
+   cannot recover that part.
 
-Limits: one model (a single Anima checkpoint), simulated rather than hardware quantization, 12
-prompt-seed pairs, step budgets 10 and 16 only, and a metric (distance to a converged trajectory) that
-can disagree with human preference. The grid of the dynamic rule was tuned on the synthetic toy only,
-not on these 12 units.
+Limits: one model (a single Anima checkpoint), simulated rather than hardware quantization (fp16 was not
+tested; the fp8 used here is scaled per tensor, which differs from the plain cast that ComfyUI's
+`--fp8_e4m3fn-unet` performs), 12 prompt-seed pairs, step budgets 8, 10, 12 and 16 only, and a metric
+(distance to a converged trajectory) that can disagree with human preference. The grid of the dynamic
+rule was tuned on the synthetic toy only, not on these 12 units.

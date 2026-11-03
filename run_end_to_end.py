@@ -195,10 +195,10 @@ def format_report(table: dict[str, Any], specs: list[str], methods: list[str], b
             cells = [f"{np.mean(extra(m)):+.4f}" for m in ("euler", "ab4", "wls8", "dynamic")]
             lines.append(f"| {spec} | " + " | ".join(cells) + f" | {interval(extra('ab4'), extra('wls8'))} |")
 
-    lines.append("\n### Floor versus 16-step discretization error (best static)\n")
-    lines.append("| spec | floor | solver error of best static at 16 steps | ratio |")
-    lines.append("| --- | --- | --- | --- |")
     steps = 16 if 16 in budgets else budgets[-1]
+    lines.append(f"\n### Floor versus {steps}-step discretization error (best static)\n")
+    lines.append(f"| spec | floor | solver error of best static at {steps} steps | ratio |")
+    lines.append("| --- | --- | --- | --- |")
     for spec in specs:
         solver = min(float(np.mean(table["solver"][f"{spec}|{m}|{steps}"])) for m in STATIC_METHODS)
         floor = float(np.mean(table["floor"][spec]))
