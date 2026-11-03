@@ -445,12 +445,12 @@ error (norm of the summed local errors along the trajectory, which is what reach
 errors add up). Tables: `results/e6_filter.md`.
 
 * **No fitted filter beats the best existing rule by more than 3.4%**; the difference is -2.6% to -3.4% at CFG 1
-  (accumulated), -0.0% to -1.1% at CFG 3, and +0.3% to +0.6% (worse) at CFG 5. At CFG 3-5 the best rule in the class is AB-2
+  (accumulated), -0.0% to -1.1% at CFG 3, and -0.1% to +0.6% at CFG 5. At CFG 3-5 the best rule in the class is AB-2
   and the fitted weights are an attenuated version of it; at CFG 1 the fit asks for strong extrapolation (weight -4.4 on
   `v_n-1 - v_n` for the accumulated objective), in line with AB-3/AB-4 being best there. There is no room for a new
   constant-weight WLS-type sampler: the existing family already contains the optimum of its class to within about 3%.
-* **The one-step metric is a bad surrogate, the accumulated one is a fair one.** In the one-step metric Euler is best at
-  CFG 3-5 although AB-2 wins end to end; the accumulated error ranks the six rules (euler, ab2, ab3, ab4, wls5, wls8)
+* **The one-step metric is a bad surrogate, the accumulated one is a fair one.** In the one-step metrics Euler is best at
+  CFG 5 and level with AB-2 at CFG 3, although AB-2 wins end to end at both; the accumulated error ranks the six rules (euler, ab2, ab3, ab4, wls5, wls8)
   with Spearman rho 0.77 on average against the E4 end-to-end ranking (0.43-1.00 over the 12 CFG/budget cells).
   This explains the failure of H8's second half: bias accumulates coherently along the path, jitter does not.
 * Limits: weights are constant along the trajectory (the optimal weights depend on the step-size ratios), only the
