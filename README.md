@@ -303,3 +303,62 @@ tested; the fp8 used here is scaled per tensor, which differs from the plain cas
 `--fp8_e4m3fn-unet` performs), 12 prompt-seed pairs, step budgets 8, 10, 12 and 16 only, and a metric
 (distance to a converged trajectory) that can disagree with human preference. The grid of the dynamic
 rule was tuned on the synthetic toy only, not on these 12 units.
+
+
+## Follow-up study E4 / E5 (registered 2026-11-04, before any E4/E5 measurement)
+
+Two open questions after E1-E3: (E4) *why* does plain Euler beat every history-based rule at 8-12 steps,
+and (E5) does the simulated INT8 picture hold for **real** INT8 models run by ComfyUI's own kernels?
+
+What was already seen before writing this section (smoke test, one prompt, one seed, Euler 12 steps, Flux3-Klein
+INT8): the final latents of the real INT8 path (Q) and of the same weights dequantized to bf16 (D) differ by
+0.06 at CFG 1 and by 0.25 at CFG 4. Nothing else from E4/E5 has been measured.
+
+### Setup
+
+* **E4 - Anima bf16** (same checkpoint, resolution, prompts and seeds as E2), CFG in {1, 3, 5}, step budgets
+  {8, 12, 16, 24}, 8 units (4 prompts x seeds 42, 1337); CFG 5 reuses the cached E2 runs for the old methods.
+  Methods: euler, ab2, ab3, ab4, wls5, wls8, dynamic plus two classical solvers at matched cost: DPM++ 2M
+  (ComfyUI's `sample_dpmpp_2m`) and Heun (2 evaluations per step; steps chosen so NFE <= budget).
+  Reference: wls5 at 96 steps for each CFG.
+* **E5 - real INT8.** Models as shipped: Flux3-Klein INT8 (768x768, schedule `simple`), Moss-Image INT8 (512x512),
+  Krea 2 INT8 (ConvRot, 512x512; exploratory, only if it fits the machine). Q = the ComfyUI INT8 path
+  (tensorwise int8 weights, dynamic per-row int8 activations, `torch._int_mm`); D = identical weights,
+  `_full_precision_mm = True`, i.e. dequantized to bf16 with unquantized activations. Q - D is therefore the
+  pure *kernel / activation* error; the weight rounding that made the checkpoint is part of the "model" and
+  its size is **not** measured (there is no bf16 original). Moss D is about 50 s per evaluation (bf16 weights do not
+  fit in VRAM), so Moss is analysed through Q alone (solver error against Q's own converged solution).
+  Flux3: CFG in {1, 4}; 8 units (4 prompts x seeds 42, 1337) at CFG 1, 4 units (seed 42) at CFG 4; budgets
+  {8, 12}; reference wls5 at 64 steps per mode.
+
+### Metrics
+
+Per cell (model, mode, CFG, budget, method): relative RMS error of the final latent against (a) the converged
+reference of the same mode and (b) the converged reference of D (kernel floor); the same split into 8x8
+low-pass and high-pass parts; SSIM and LPIPS-alex of the decoded images; observed convergence order (slope
+of log error against log budget between 8 and 24 steps); paired bootstrap intervals against Euler.
+Trajectory diagnostics (E4 and E5-Flux3, 20 steps): relative size, lag-1/lag-2 cosine, second-difference ratio,
+spatial high-frequency share of the velocity error `e = v_Q - v_D`, accumulated response of every rule against the
+white-noise prediction (as in E1); for E4 additionally the **one-step local consistency error** of every rule
+(distance of its step increment from the trapezoid increment that uses the true next velocity), the velocity
+curvature, the cosine between consecutive velocities, and the same quantities for the conditional prediction,
+the unconditional prediction and the guidance term `s (v_c - v_u)` separately.
+
+### Hypotheses
+
+| # | Hypothesis | Counts as supported if |
+| --- | --- | --- |
+| H7 | The advantage of Euler over history rules is created by guidance: at CFG 1 a history rule (ab3 or dynamic) beats Euler at 12 and 16 steps | paired interval of (best of ab3, dynamic) - euler excludes 0 on the negative side at CFG 1 for both budgets, and not at CFG 5 |
+| H8 | One-step local consistency error of quadratic extrapolation (ab3, wls5) is *larger* than that of holding the last velocity (Euler) at CFG 5 and N <= 12, and smaller at CFG 1 | median over steps and units, direction as stated in both CFG values |
+| H9 | The guidance term is rougher in time than the conditional prediction | second-difference ratio of `s (v_c - v_u)` > that of `v_c` at CFG 5, in a majority of units |
+| H10 | Observed order of Euler is near 1 (0.7-1.3) and the observed orders of ab3 and wls5 stay below 1.5 in the 8-24 step range at CFG 5 | slope estimates over units, point values |
+| H11 | At CFG 5, N <= 12, neither DPM++ 2M nor Heun beats Euler (expected null) | intervals of the paired difference include 0 or are positive |
+| H12 | The real INT8 error (Q - D) is nearly white in time, as simulated int8_wa was | lag-1 cosine < 0.3 for Flux3, and ab4 realised/white response > 0.8 |
+| H13 | The relative size of Q - D grows with CFG | size at CFG 4 > 1.5 x size at CFG 1 (Flux3) |
+| H14 | Real INT8 reproduces the simulated pattern: the extra error of ab4 caused by Q is larger than that of euler and wls8 | interval of (ab4 extra - wls8 extra) excludes 0 on the positive side, at 8 or 12 steps |
+| H15 | Replication across models: euler is not worse than wls8 in at least 75% of (model, mode, CFG, budget) cells | count of cells with mean(euler) <= mean(wls8) |
+
+Prior expectation, written down before running: H7 probable, H8 probable, H9 likely, H10 uncertain, H11 likely,
+H12 probable, H13 probable, H14 probable, H15 probable. Failure modes to report rather than hide: if Q in
+Flux3 is not what ComfyUI executes at inference (e.g. the layer is flagged full precision), H12-H14 are void;
+OOM or driver problems on Krea 2 end that arm without replacement.

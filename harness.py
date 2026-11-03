@@ -8,6 +8,7 @@ import torch
 from _bootstrap import module
 
 import comfy.model_management
+import comfy.ops
 import comfy.sample
 import comfy.samplers
 import comfy.sd
@@ -33,11 +34,59 @@ SamplerFunction = Callable[..., torch.Tensor]
 class RigConfig:
     unet: str = "anima_aestheticV11(1).safetensors"
     clip: str = "anima_baseV10_txt.safetensors"
+    clip_dir: str = "clip"
     clip_type: str = "STABLE_DIFFUSION"
+    vae: str = "qwenImage_qwenImageVAE.safetensors"
     width: int = 576
     height: int = 768
     cfg: float = 5.0
     scheduler: str = "normal"
+    simulate: bool = True
+
+
+REAL_INT8_MODES: tuple[str, ...] = ("q", "d")
+MEMORY_FRACTION: float = 0.93
+FLUX2_VAE: str = "flux2-vae.safetensors"
+MODEL_CONFIGS: dict[str, RigConfig] = {
+    "anima": RigConfig(),
+    "flux3": RigConfig(
+        unet="flux3Klein_klein_pruned_int8.safetensors",
+        clip="flux3Klein_klein_txt_3299383.safetensors",
+        clip_type="FLUX3",
+        vae=FLUX2_VAE,
+        width=768,
+        height=768,
+        cfg=4.0,
+        scheduler="simple",
+        simulate=False,
+    ),
+    "moss": RigConfig(
+        unet="mossImage_sft_pruned_int8.safetensors",
+        clip="mossImage_sft_txt_int8.safetensors",
+        clip_dir="text_encoders",
+        clip_type="MOSS_IMAGE",
+        vae=FLUX2_VAE,
+        width=768,
+        height=768,
+        cfg=4.0,
+        scheduler="simple",
+        simulate=False,
+    ),
+    "krea2": RigConfig(
+        unet="kromaKrea2_opd.safetensors",
+        clip="qwen3vl_4b_bf16.safetensors",
+        clip_type="KREA2",
+        width=768,
+        height=768,
+        cfg=4.0,
+        scheduler="simple",
+        simulate=False,
+    ),
+}
+
+
+def limit_gpu_memory(fraction: float = MEMORY_FRACTION) -> None:
+    torch.cuda.set_per_process_memory_fraction(fraction)
 
 
 class Rig:
@@ -47,7 +96,7 @@ class Rig:
             str(MODELS / "diffusion_models" / config.unet), disable_dynamic=True
         )
         clip = comfy.sd.load_clip(
-            [str(MODELS / "clip" / config.clip)],
+            [str(MODELS / config.clip_dir / config.clip)],
             clip_type=getattr(comfy.sd.CLIPType, config.clip_type),
         )
         self.conditioning: dict[str, tuple[Any, Any]] = {
@@ -55,14 +104,27 @@ class Rig:
         }
         del clip
         comfy.model_management.soft_empty_cache()
-        self.weights = fakequant.QuantizedWeights(self.patcher.model.diffusion_model)
+        self.weights = fakequant.QuantizedWeights(self.patcher.model.diffusion_model) if config.simulate else None
 
     @staticmethod
     def encode(clip: Any, text: str) -> Any:
         return clip.encode_from_tokens_scheduled(clip.tokenize(text))
 
     def use(self, name: str) -> None:
-        self.weights.apply(fakequant.SPECS[name])
+        if self.config.simulate:
+            self.weights.apply(fakequant.SPECS[name])
+            return
+        for layer in self.patcher.model.modules():
+            if isinstance(layer, comfy.ops.MixedPrecisionOp):
+                layer._full_precision_mm = name == "d" or layer._full_precision_mm_config
+
+    def release(self) -> None:
+        if self.config.simulate:
+            self.weights.release()
+
+    @property
+    def latent_dimensions(self) -> int:
+        return self.patcher.get_model_object("latent_format").latent_dimensions
 
     def sigmas(self, steps: int) -> torch.Tensor:
         sampling = self.patcher.get_model_object("model_sampling")
@@ -70,15 +132,15 @@ class Rig:
 
     def empty_latent(self) -> torch.Tensor:
         latent = torch.zeros([1, 4, self.config.height // 8, self.config.width // 8])
-        return comfy.sample.fix_empty_latent_channels(self.patcher, latent)
+        return comfy.sample.fix_empty_latent_channels(self.patcher, latent, downscale_ratio_spacial=8)
 
-    def sample(self, prompt: str, seed: int, steps: int, sampler: SamplerFunction) -> np.ndarray:
+    def sample(self, prompt: str, seed: int, steps: int, sampler: SamplerFunction, cfg: float | None = None) -> np.ndarray:
         latent = self.empty_latent()
         noise = comfy.sample.prepare_noise(latent, seed)
         positive, negative = self.conditioning[prompt]
         guider = comfy.samplers.CFGGuider(self.patcher)
         guider.set_conds(positive, negative)
-        guider.set_cfg(self.config.cfg)
+        guider.set_cfg(self.config.cfg if cfg is None else cfg)
         result = guider.sample(
             noise,
             latent,

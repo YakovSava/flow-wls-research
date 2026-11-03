@@ -43,8 +43,10 @@ def to_lpips_input(images: torch.Tensor) -> torch.Tensor:
     return images.float().permute(0, 3, 1, 2) * 2.0 - 1.0
 
 
-def decode(vae, latent: np.ndarray) -> torch.Tensor:
-    tensor = torch.from_numpy(latent).float()[None, :, None]
+def decode(vae, latent: np.ndarray, dimensions: int = 3) -> torch.Tensor:
+    tensor = torch.from_numpy(latent).float()[None]
+    if dimensions == 3:
+        tensor = tensor[:, :, None]
     with torch.inference_mode():
         images = vae.decode_tiled(tensor, tile_x=TILE, tile_y=TILE, overlap=TILE_OVERLAP)
     return images.reshape(-1, *images.shape[-3:]).clamp(0.0, 1.0).float().clone()
