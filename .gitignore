@@ -23,3 +23,5 @@ venv/
 .ruff_cache/
 .vscode/
 .idea/
+
+!figures/*.png
