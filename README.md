@@ -154,9 +154,9 @@ comparison with AB-6, not with Euler, and should be read in that sense.
 ### E2 - end-to-end on Anima (12 units: 4 prompts x 3 seeds, 10 and 16 steps)
 
 **Status update (2026-11-03, after E2/E3):** all experiments of the protocol have finished. Full tables:
-`results/end_to_end.md`, `results/perceptual.md`; raw latents are not versioned (`dumps/`).
+`results/end_to_end_10_16.md`, `results/perceptual_10_16.md`; raw latents are not versioned (`dumps/`).
 
-![end to end](figures/end_to_end.png)
+![end to end](figures/end_to_end_10_16.png)
 
 Bars: relative RMS error of the final latent against the converged bf16 solution (wls5, 96 steps), mean
 over 12 units, whiskers are standard errors. Black ticks: the quantization floor (converged quantized
@@ -178,7 +178,7 @@ Total error, mean of 12 units (selected columns):
 | 10 | ab4 | 1.571 | 1.386 | 1.939 | 1.778 | 1.605 | 1.956 | 1.335 |
 | 10 | wls8 | 0.918 | 0.903 | 0.932 | 0.911 | 0.917 | 0.914 | 0.888 |
 
-Verdicts on the pre-registered hypotheses (paired bootstrap intervals in `results/end_to_end.md`):
+Verdicts on the pre-registered hypotheses (paired bootstrap intervals in `results/end_to_end_10_16.md`):
 
 * **H3 (AB-4 suffers more from quantization than WLS-8): supported only for activation quantization.**
   Extra error of AB-4 minus extra error of WLS-8 is positive with an interval excluding 0 for fp8_wa,

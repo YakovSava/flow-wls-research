@@ -96,6 +96,7 @@ def main() -> None:
     parser.add_argument("--methods", nargs="+", default=list(run_end_to_end.METHODS))
     parser.add_argument("--budgets", nargs="+", type=int, default=run_end_to_end.BUDGETS)
     parser.add_argument("--report-only", action="store_true")
+    parser.add_argument("--name", default="perceptual")
     arguments = parser.parse_args()
     torch.cuda.set_per_process_memory_fraction(MEMORY_FRACTION)
     units = [(p, s) for s in arguments.seeds for p in arguments.prompts]
@@ -104,7 +105,7 @@ def main() -> None:
     else:
         results = run(units, arguments.specs, arguments.methods, arguments.budgets)
     text = report(results, units, arguments.specs, arguments.methods, arguments.budgets)
-    (RESULTS / "perceptual.md").write_text(text, encoding="utf-8")
+    (RESULTS / f"{arguments.name}.md").write_text(text, encoding="utf-8")
     print(text)
 
 

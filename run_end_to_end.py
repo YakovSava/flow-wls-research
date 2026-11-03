@@ -244,6 +244,7 @@ def main() -> None:
     parser.add_argument("--methods", nargs="+", default=list(METHODS))
     parser.add_argument("--budgets", nargs="+", type=int, default=BUDGETS)
     parser.add_argument("--report-only", action="store_true")
+    parser.add_argument("--name", default="end_to_end")
     arguments = parser.parse_args()
     units = [(prompt, seed) for seed in arguments.seeds for prompt in arguments.prompts]
     if not arguments.report_only:
@@ -252,8 +253,8 @@ def main() -> None:
     RESULTS.mkdir(exist_ok=True)
     text = format_report(table, arguments.specs, arguments.methods, arguments.budgets)
     text += selection_summary(arguments.specs, table["units"], arguments.budgets)
-    (RESULTS / "end_to_end.md").write_text(text, encoding="utf-8")
-    (RESULTS / "end_to_end.json").write_text(json.dumps(table), encoding="utf-8")
+    (RESULTS / f"{arguments.name}.md").write_text(text, encoding="utf-8")
+    (RESULTS / f"{arguments.name}.json").write_text(json.dumps(table), encoding="utf-8")
     print(text)
 
 

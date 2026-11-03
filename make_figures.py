@@ -10,6 +10,7 @@ import numpy as np
 ROOT: pathlib.Path = pathlib.Path(__file__).resolve().parent
 RESULTS: pathlib.Path = ROOT / "results"
 FIGURES: pathlib.Path = ROOT / "figures"
+END_TO_END_RUNS: list[str] = ["end_to_end_10_16", "end_to_end_8_12"]
 SPECS: list[str] = ["fp8_w", "fp8_wa", "int8_wa", "int4_w", "int4_wa8", "nvfp4_w"]
 COLORS: dict[str, str] = {
     "euler": "#7f7f7f",
@@ -83,8 +84,8 @@ def synthetic_figure() -> None:
     plt.close(figure)
 
 
-def end_to_end_figure() -> None:
-    data = load("end_to_end.json")
+def end_to_end_figure(name: str) -> None:
+    data = load(f"{name}.json")
     budgets = sorted({int(key.split("|")[2]) for key in data["total"]})
     specs = ["bf16"] + SPECS
     specs = [s for s in specs if f"{s}|euler|{budgets[0]}" in data["total"]]
@@ -110,7 +111,7 @@ def end_to_end_figure() -> None:
     axes[0].set_ylabel("relative error vs converged bf16")
     axes[-1].legend(fontsize=8, ncol=2)
     figure.tight_layout()
-    figure.savefig(FIGURES / "end_to_end.png", dpi=140)
+    figure.savefig(FIGURES / f"{name}.png", dpi=140)
     plt.close(figure)
 
 
@@ -119,10 +120,13 @@ def main() -> None:
     for name, function in (
         ("error_structure.json", structure_figure),
         ("synthetic.json", synthetic_figure),
-        ("end_to_end.json", end_to_end_figure),
     ):
         if (RESULTS / name).exists():
             function()
+            print("wrote figure from", name)
+    for name in END_TO_END_RUNS:
+        if (RESULTS / f"{name}.json").exists():
+            end_to_end_figure(name)
             print("wrote figure from", name)
 
 
