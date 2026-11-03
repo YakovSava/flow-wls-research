@@ -8,6 +8,7 @@ import torch
 from _bootstrap import module
 
 import comfy.model_management
+import comfy.model_patcher
 import comfy.ops
 import comfy.sample
 import comfy.samplers
@@ -42,6 +43,7 @@ class RigConfig:
     cfg: float = 5.0
     scheduler: str = "normal"
     simulate: bool = True
+    latent_dimensions: int = 3
 
 
 REAL_INT8_MODES: tuple[str, ...] = ("q", "d")
@@ -59,6 +61,7 @@ MODEL_CONFIGS: dict[str, RigConfig] = {
         cfg=4.0,
         scheduler="simple",
         simulate=False,
+        latent_dimensions=2,
     ),
     "moss": RigConfig(
         unet="mossImage_sft_pruned_int8.safetensors",
@@ -66,18 +69,19 @@ MODEL_CONFIGS: dict[str, RigConfig] = {
         clip_dir="text_encoders",
         clip_type="MOSS_IMAGE",
         vae=FLUX2_VAE,
-        width=768,
-        height=768,
+        width=512,
+        height=512,
         cfg=4.0,
         scheduler="simple",
         simulate=False,
+        latent_dimensions=2,
     ),
     "krea2": RigConfig(
         unet="kromaKrea2_opd.safetensors",
         clip="qwen3vl_4b_bf16.safetensors",
         clip_type="KREA2",
-        width=768,
-        height=768,
+        width=512,
+        height=512,
         cfg=4.0,
         scheduler="simple",
         simulate=False,
@@ -134,13 +138,29 @@ class Rig:
         latent = torch.zeros([1, 4, self.config.height // 8, self.config.width // 8])
         return comfy.sample.fix_empty_latent_channels(self.patcher, latent, downscale_ratio_spacial=8)
 
-    def sample(self, prompt: str, seed: int, steps: int, sampler: SamplerFunction, cfg: float | None = None) -> np.ndarray:
+    def sample(
+        self,
+        prompt: str,
+        seed: int,
+        steps: int,
+        sampler: SamplerFunction,
+        cfg: float | None = None,
+        tap: Callable[[dict[str, Any]], None] | None = None,
+    ) -> np.ndarray:
         latent = self.empty_latent()
         noise = comfy.sample.prepare_noise(latent, seed)
         positive, negative = self.conditioning[prompt]
         guider = comfy.samplers.CFGGuider(self.patcher)
         guider.set_conds(positive, negative)
         guider.set_cfg(self.config.cfg if cfg is None else cfg)
+        if tap is not None:
+            def post_cfg(arguments: dict[str, Any]) -> torch.Tensor:
+                tap(arguments)
+                return arguments["denoised"]
+
+            guider.model_options = comfy.model_patcher.set_model_options_post_cfg_function(
+                dict(guider.model_options), post_cfg
+            )
         result = guider.sample(
             noise,
             latent,
