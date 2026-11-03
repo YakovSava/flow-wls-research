@@ -432,3 +432,27 @@ steps the second difference of `v_c` is about 5% of its norm, the first differen
 component that is almost independent from step to step, and a rule whose weights are larger than Euler's amplifies
 this jitter (white-noise gain 1.06 for AB-2, 1.21 for AB-3, 1.97 for AB-4 in `results/e5_structure_flux3.md`). No
 ablation isolated this mechanism.
+
+
+### E6 - can a fitted linear history filter beat the existing rules? (Anima bf16, 8 units, no new sampling)
+
+Not registered in advance; motivated by the roughness found in E4. Raw guided velocities of Euler trajectories
+(CFG {1, 3, 5}, 8/12/16/24 steps) were stored, and a constant-weight linear history filter
+`increment = step * (v_n + sum_k a_k (v_n-k - v_n))`, K = 2, 3, 4, was fitted by least squares against the trapezoid
+increment that uses the true next velocity; every number below is held out (fit on 7 units, evaluated on the 8th).
+Two objectives, each fitted and evaluated on the same quantity: the relative one-step error, and the **accumulated**
+error (norm of the summed local errors along the trajectory, which is what reaches the final latent when local
+errors add up). Tables: `results/e6_filter.md`.
+
+* **No fitted filter beats the best existing rule by more than 3.4%**; the difference is -2.6% to -3.4% at CFG 1
+  (accumulated), -0.0% to -1.1% at CFG 3, and +0.3% to +0.6% (worse) at CFG 5. At CFG 3-5 the best rule in the class is AB-2
+  and the fitted weights are an attenuated version of it; at CFG 1 the fit asks for strong extrapolation (weight -4.4 on
+  `v_n-1 - v_n` for the accumulated objective), in line with AB-3/AB-4 being best there. There is no room for a new
+  constant-weight WLS-type sampler: the existing family already contains the optimum of its class to within about 3%.
+* **The one-step metric is a bad surrogate, the accumulated one is a fair one.** In the one-step metric Euler is best at
+  CFG 3-5 although AB-2 wins end to end; the accumulated error ranks the six rules (euler, ab2, ab3, ab4, wls5, wls8)
+  with Spearman rho 0.77 on average against the E4 end-to-end ranking (0.43-1.00 over the 12 CFG/budget cells).
+  This explains the failure of H8's second half: bias accumulates coherently along the path, jitter does not.
+* Limits: weights are constant along the trajectory (the optimal weights depend on the step-size ratios), only the
+  guided velocity of Euler trajectories was used, and the surrogate objective is not the final error. A
+  data-driven filter was **not** run through the sampler.
