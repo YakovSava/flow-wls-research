@@ -13,6 +13,7 @@ import comfy.ops
 import comfy.sample
 import comfy.samplers
 import comfy.sd
+from comfy.k_diffusion import sampling as k_sampling
 
 fakequant = module("fakequant")
 
@@ -48,6 +49,7 @@ class RigConfig:
 
 REAL_INT8_MODES: tuple[str, ...] = ("q", "d")
 MEMORY_FRACTION: float = 0.93
+WARM_UP_STEPS: int = 12
 FLUX2_VAE: str = "flux2-vae.safetensors"
 MODEL_CONFIGS: dict[str, RigConfig] = {
     "anima": RigConfig(),
@@ -109,6 +111,8 @@ class Rig:
         del clip
         comfy.model_management.soft_empty_cache()
         self.weights = fakequant.QuantizedWeights(self.patcher.model.diffusion_model) if config.simulate else None
+        if not config.simulate:
+            self.warm_up()
 
     @staticmethod
     def encode(clip: Any, text: str) -> Any:
@@ -121,6 +125,10 @@ class Rig:
         for layer in self.patcher.model.modules():
             if isinstance(layer, comfy.ops.MixedPrecisionOp):
                 layer._full_precision_mm = name == "d" or layer._full_precision_mm_config
+
+    def warm_up(self) -> None:
+        self.use(REAL_INT8_MODES[0])
+        self.sample(next(iter(self.conditioning)), 0, WARM_UP_STEPS, k_sampling.sample_euler, cfg=1.0)
 
     def release(self) -> None:
         if self.config.simulate:
