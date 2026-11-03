@@ -362,3 +362,73 @@ Prior expectation, written down before running: H7 probable, H8 probable, H9 lik
 H12 probable, H13 probable, H14 probable, H15 probable. Failure modes to report rather than hide: if Q in
 Flux3 is not what ComfyUI executes at inference (e.g. the layer is flagged full precision), H12-H14 are void;
 OOM or driver problems on Krea 2 end that arm without replacement.
+
+
+### E4 results - Anima bf16, CFG {1, 3, 5}, budgets 8/12/16/24, 8 units
+
+Full tables: `results/e4_anima.md` (latent metrics, observed orders, paired contrasts), `results/e4_anima_perceptual.md`
+(SSIM, LPIPS), `results/e4_diag_anima.md` (trajectory diagnostics). Reference convergence: ab3 and wls5 at 96
+steps differ by 1.7% (CFG 5), 2.7% (CFG 1) and 5.9% (CFG 3) on the checked unit.
+
+Total error against the converged solution of the same CFG (mean of 8 units):
+
+| steps | method | CFG 1 | CFG 3 | CFG 5 |
+| --- | --- | --- | --- | --- |
+| 12 | euler | 0.325 | 0.472 | 0.686 |
+| 12 | ab2 | **0.215** | **0.391** | **0.654** |
+| 12 | ab3 | 0.249 | 0.466 | 0.707 |
+| 12 | ab4 | 0.282 | 0.632 | 1.029 |
+| 12 | wls8 | 0.343 | 0.652 | 0.890 |
+| 12 | dynamic | 0.258 | 0.491 | 0.776 |
+| 12 | dpmpp2m | 0.317 | 0.448 | 0.693 |
+| 12 | heun (NFE matched) | 0.414 | 0.660 | 0.862 |
+| 24 | euler | 0.199 | 0.284 | 0.391 |
+| 24 | ab2 | 0.112 | 0.215 | **0.307** |
+| 24 | ab3 | 0.111 | **0.211** | 0.379 |
+| 24 | ab4 | **0.107** | 0.263 | 0.456 |
+| 24 | wls8 | 0.176 | 0.364 | 0.643 |
+| 24 | dpmpp2m | 0.146 | 0.239 | 0.321 |
+
+LPIPS(alex) of the decoded image at 12 steps (euler / ab2 / ab3 / ab4 / wls8 / dpmpp2m): CFG 1 0.459 / 0.234 / 0.210 /
+0.242 / 0.256 / 0.255; CFG 3 0.454 / 0.315 / 0.329 / 0.533 / 0.455 / 0.305; CFG 5 0.486 / 0.423 / 0.460 / 0.707 /
+0.646 / 0.417.
+
+Verdicts on the registered hypotheses:
+
+* **H7 (the Euler advantage is created by guidance): supported.** At CFG 1 the best of ab3/dynamic (ab3) beats Euler
+  with an interval excluding 0 at all four budgets (-0.074 to -0.088). At CFG 5 it does not: +0.065 (worse) at 8
+  steps, inconclusive at 12, 16 and 24. CFG 3 is in between (worse at 8, inconclusive at 12, better at 16 and 24).
+  The gain of a history rule over Euler grows monotonically as guidance is removed.
+* **H8 (local consistency of quadratic extrapolation worse than holding the last velocity at CFG 5 and better at
+  CFG 1): first half supported, second half refuted.** At CFG 5 the median one-step consistency error is 0.061 for
+  Euler against 0.44 (ab3) and 0.45 (wls5) at 8 steps, 0.054 against 0.21 and 0.20 at 12; ab3 beats Euler in 0-4% of
+  the steps. At CFG 1 the quadratic rules are still worse than holding (8 steps 0.068 against 0.029; 24 steps 0.019
+  against 0.015); only AB-2 gets ahead, from 16 steps (0.018 against 0.020). The one-step metric therefore does not
+  predict the end-to-end ranking (ab3 wins end to end at CFG 1) and should not be used as a surrogate.
+* **H9 (the guidance term is rougher than the conditional prediction): supported, 8 of 8 units in every one of
+  the 12 (CFG, budget) rows.** At CFG 5 the second-difference ratio of `s (v_c - v_u)` is 0.28-0.31 against
+  0.0009-0.0048 for `v_c`, and its relative change between consecutive steps is 0.88-1.12 (the term is essentially
+  re-drawn at every step) against 0.05-0.13. At CFG 1 the unconditional branch was evaluated by the tap and its
+  "guidance share" (11.9) is not interpretable; I did not trace why.
+* **H10 (observed orders): second part supported, first part refuted narrowly.** Euler's observed order is 0.61-0.69
+  (+- 0.05-0.10), just under the registered band 0.7-1.3; ab3 0.76 (CFG 5), 1.04-1.05 (CFG 1, 3); wls5 0.52 (CFG 5),
+  0.91-1.07; ab4 1.4-1.6. No rule reaches its nominal order in the 8-24 step range.
+* **H11 (DPM++ 2M and Heun do not beat Euler at CFG 5 and <= 12 steps): supported.** DPM++ 2M is worse at 8 steps
+  (+0.045) and equal at 12 (+0.007, inconclusive); Heun at matched NFE is worse everywhere (+0.20, +0.18). From 16
+  steps DPM++ 2M overtakes Euler at CFG 5 (-0.056 at 16, inconclusive; -0.070 at 24, interval excludes 0).
+* **H15 (replication of Euler not worse than WLS-8), Anima part: supported, 10 of 12 (CFG, budget) pairs.** WLS-8 is
+  ahead only at CFG 1 with 16 and 24 steps.
+
+**Exploratory finding, not registered:** AB-2 is better than Euler in **all 12** (CFG, budget) cells, by 0.03-0.12 with
+intervals excluding 0, and at CFG 3-5 it is the best or within noise of the best rule. AB-2 had not been part of the
+E2/E2' method set, so the statement "Euler is the best of the six rules" in E2' and in the first Conclusions concerns
+only {euler, ab3, ab4, wls5, wls8, dynamic}; **the correct reading is that the optimum is a low-order rule (order 2),
+not order 1**, and that orders 3-4 and the long polynomial windows of Flow-WLS lose to it at CFG >= 3. The dynamic rule
+of this study cannot select AB-2 (its grid starts at window length 4), which is a design limitation, not a
+property of dynamic selection in general.
+
+Interpretation, flagged as such: the conditional velocity itself is not smooth at the scale of a step (at CFG 1 and 8
+steps the second difference of `v_c` is about 5% of its norm, the first difference 6.6%), the guidance term adds a
+component that is almost independent from step to step, and a rule whose weights are larger than Euler's amplifies
+this jitter (white-noise gain 1.06 for AB-2, 1.21 for AB-3, 1.97 for AB-4 in `results/e5_structure_flux3.md`). No
+ablation isolated this mechanism.
