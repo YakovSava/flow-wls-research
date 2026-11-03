@@ -456,3 +456,21 @@ errors add up). Tables: `results/e6_filter.md`.
 * Limits: weights are constant along the trajectory (the optimal weights depend on the step-size ratios), only the
   guided velocity of Euler trajectories was used, and the surrogate objective is not the final error. A
   data-driven filter was **not** run through the sampler.
+
+**Measuring the jitter** (`jitter_analysis.py`, `results/e6_jitter.md`, same stored velocities). For white jitter of
+relative variance s^2 the normalised difference energy rho_k = mean ||Delta^k v||^2 / (C(2k, k) ||v||^2) equals s^2 for
+every difference order k, while a smooth field gives values that fall quickly with k. Result (mean over 8 units):
+
+| CFG | steps | rho_1 | rho_2 | rho_3 | rho_4 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 12 | 0.00148 | 0.00031 | 0.00017 | 0.00014 |
+| 3 | 12 | 0.00393 | 0.00231 | 0.00185 | 0.00165 |
+| 5 | 12 | 0.01240 | 0.00795 | 0.00625 | 0.00544 |
+| 5 | 24 | 0.01200 | 0.00716 | 0.00511 | 0.00414 |
+
+At CFG 3-5 the profile flattens (rho_4 / rho_1 = 0.31-0.44), i.e. a step-to-step uncorrelated component of relative
+size sqrt(rho_4) of about 4% (CFG 3) and 6-7% (CFG 5) of the velocity norm is present; at CFG 1 it is about 1%
+(rho_4 / rho_1 = 0.07-0.12). The guided velocity is therefore not a smooth function sampled at the steps but a smooth trend plus a
+jitter that grows with guidance. This is the measured version of the E4 interpretation; it was measured on Euler
+trajectories with uniform index differences on a non-uniform sigma grid (a smooth trend leaks into higher differences,
+which would raise, not flatten, the profile), and it does not show where the jitter comes from (network error, guidance or both).
