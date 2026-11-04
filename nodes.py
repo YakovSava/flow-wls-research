@@ -3,7 +3,7 @@ from typing import Any
 
 import comfy.samplers
 
-from .history_filter import wls_spec
+from .history_filter import adams_bashforth_spec, wls_spec
 from .samplers import sample_history
 
 
@@ -43,5 +43,28 @@ class FlowWLSSampler:
         return (comfy.samplers.KSAMPLER(sampler_function),)
 
 
-NODE_CLASS_MAPPINGS: dict[str, Any] = {"FlowWLSSampler": FlowWLSSampler}
-NODE_DISPLAY_NAME_MAPPINGS: dict[str, str] = {"FlowWLSSampler": "Flow-WLS Sampler (static / CV-dynamic)"}
+EASY_PRESETS: dict[str, int] = {
+    "Model uses CFG 3 or higher (AB-2)": 2,
+    "Distilled model, CFG 1 (AB-3)": 3,
+}
+
+
+class FlowEasySampler:
+    @classmethod
+    def INPUT_TYPES(cls) -> dict[str, Any]:
+        return {"required": {"preset": (list(EASY_PRESETS), {"tooltip": "Pick the line that describes your model."})}}
+
+    RETURN_TYPES = ("SAMPLER",)
+    FUNCTION = "get_sampler"
+    CATEGORY = "sampling/custom_sampling/samplers"
+
+    def get_sampler(self, preset: str) -> tuple[Any]:
+        sampler_function = functools.partial(sample_history, spec=adams_bashforth_spec(EASY_PRESETS[preset]))
+        return (comfy.samplers.KSAMPLER(sampler_function),)
+
+
+NODE_CLASS_MAPPINGS: dict[str, Any] = {"FlowWLSSampler": FlowWLSSampler, "FlowEasySampler": FlowEasySampler}
+NODE_DISPLAY_NAME_MAPPINGS: dict[str, str] = {
+    "FlowWLSSampler": "Flow-WLS Sampler (static / CV-dynamic)",
+    "FlowEasySampler": "Flow Easy Sampler (low steps)",
+}
