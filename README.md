@@ -561,3 +561,43 @@ steps, one unit): 5.2%.
 * The pattern is the one of Flux3 at CFG 1 (distilled model, little guidance): AB-3 and the dynamic rule are at
   least as good as Euler, AB-4 and WLS-8 are not; AB-2 shows no gain here (+0.013, +0.022, inconclusive). H15 for this
   arm: Euler is not worse than WLS-8 in 2 of 2 budgets.
+
+#### E5d - Flux3-Klein INT8 at CFG 4, budgets 8 and 12, 4 units (seed 42), Q and D (`results/e5_flux3_c4.md`, `..._perceptual.md`)
+
+CFG 4 is not the intended regime of this distilled model and its references are poorly converged (ab3 against wls5 at
+64 steps differ by 34% for Q and 20% for D on the checked unit); differences between methods below about 0.03 are
+within that uncertainty and only the large effects should be read.
+
+Total error against the converged D solution (mean of 4 units):
+
+| steps | method | Q | D | Q - D (paired interval) |
+| --- | --- | --- | --- | --- |
+| 8 | euler | 0.726 | 0.721 | +0.0050 [-0.0077, +0.0142] |
+| 8 | ab2 | 0.719 | 0.716 | +0.0034 [-0.0041, +0.0079] |
+| 8 | ab3 | 0.795 | 0.794 | +0.0008 [-0.0068, +0.0073] |
+| 8 | ab4 | 1.547 | 1.530 | +0.0169 [-0.0131, +0.0488] |
+| 8 | wls8 | 1.209 | 1.202 | +0.0063 [+0.0027, +0.0100]* |
+| 8 | dpmpp2m | 0.714 | 0.716 | -0.0026 [-0.0381, +0.0259] |
+| 12 | euler | 0.636 | 0.630 | +0.0058 [+0.0036, +0.0076]* |
+| 12 | ab2 | 0.613 | 0.609 | +0.0049 [-0.0031, +0.0130] |
+| 12 | ab3 | 0.654 | 0.656 | -0.0023 [-0.0218, +0.0136] |
+| 12 | ab4 | 1.126 | 1.104 | +0.0221 [+0.0018, +0.0359]* |
+| 12 | wls8 | 0.832 | 0.835 | -0.0025 [-0.0117, +0.0038] |
+| 12 | dpmpp2m | 0.623 | 0.618 | +0.0046 [-0.0073, +0.0168] |
+
+* **Kernel effect and H14.** The extra error of the real INT8 path is small and is largest for AB-4 (+0.017, +0.022);
+  (ab4 extra) - (wls8 extra) = +0.0106 [-0.0215, +0.0442] at 8 steps and +0.0245 [-0.0016, +0.0401] at 12. The direction
+  is the predicted one, but both intervals include 0, so **H14 is not supported by its criterion** (borderline at 12
+  steps), and the size of the effect is two orders of magnitude below the excess error of AB-4 itself (+0.82 at 8
+  steps). The floor (converged Q against converged D) is 0.159 (se 0.062). Compared with E2' (simulated INT8 W+A on
+  Anima: AB-4 extra +0.46 at 8 steps) the real kernels act far more weakly, which fits their measured size (rel. 1.3-5.7%
+  against 8-17% for the simulated formats).
+* **Ranking at CFG 4 is the CFG 5 picture of Anima**, on another architecture: AB-4 (+0.82, +0.49), WLS-8 (+0.48, +0.20),
+  WLS-5 (+0.19, +0.15) and the dynamic rule (+0.15, +0.10) are significantly worse than Euler; AB-2 (-0.007 at 8,
+  -0.022 [-0.036, -0.004] at 12 steps) and DPM++ 2M (-0.012, -0.013, inconclusive) are level with or slightly better than
+  it; AB-3 is inconclusive (+0.069, +0.018). LPIPS at 12 steps (Q): ab2 0.232, dpmpp2m 0.242, euler 0.254, ab3 0.272,
+  dynamic 0.345, wls5 0.416, wls8 0.462, ab4 0.555; SSIM: dpmpp2m and ab2 0.733, euler 0.713, wls8 0.565, ab4 0.495.
+  H15 for this arm: Euler is not worse than WLS-8 in 4 of 4 (mode, budget) pairs.
+* **The dependence on CFG found in E4 is reproduced on a second architecture and a real quantized model**: at CFG 1
+  (E5b) history rules beat Euler and the best is AB-3; at CFG 4 the best are AB-2 and DPM++ 2M and everything of higher
+  order or with a long window loses.
