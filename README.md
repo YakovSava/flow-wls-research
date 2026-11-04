@@ -474,3 +474,60 @@ size sqrt(rho_4) of about 4% (CFG 3) and 6-7% (CFG 5) of the velocity norm is pr
 jitter that grows with guidance. This is the measured version of the E4 interpretation; it was measured on Euler
 trajectories with uniform index differences on a non-uniform sigma grid (a smooth trend leaks into higher differences,
 which would raise, not flatten, the profile), and it does not show where the jitter comes from (network error, guidance or both).
+
+
+### E5 results - real INT8 models
+
+Method set note: the registered E5 method set was {euler, ab3, ab4, wls5, wls8, dynamic}. After E4 showed that AB-2 and
+DPM++ 2M belong in the comparison, `ab2` and `dpmpp2m` were added **post hoc** to the E5 stages that had not started
+yet and to Flux3 CFG 1 (re-run from the cache; the report of the registered set is kept in
+`results/e5_flux3_c1_registered_methods.md`, its numbers for the old methods are identical).
+
+#### E5a - structure of the real INT8 error in Flux3-Klein (8 units, 20 steps; `results/e5_structure_flux3.md`)
+
+Error `e = v_Q - v_D`, Q = ComfyUI INT8 kernels (per-tensor int8 weights, dynamic per-row int8 activations),
+D = the same weights dequantized to bf16 with unquantized activations.
+
+| CFG | rel. size | lag-1 cos | lag-2 cos | 2nd-diff ratio (1 = white) | spatial HF err/signal | ab2 real/white | ab3 real/white | ab4 real/white | wls5 | wls8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0.0131 | -0.001 | 0.000 | 0.846 | 0.430/0.420 | 1.06/1.06 | 1.20/1.21 | 1.96/1.97 | 1.10/1.10 | 1.08/1.08 |
+| 4 | 0.0571 | -0.000 | -0.001 | 0.861 | 0.440/0.381 | 1.06/1.06 | 1.21/1.21 | 2.01/2.01 | 1.11/1.11 | 1.08/1.08 |
+
+* **H12: supported.** The real INT8 error is white in time to within the resolution of the measurement (lag-1
+  cosine -0.001 and 0.000; realised and white-noise accumulation agree to 1% for every rule; spatially it has the
+  spectrum of the signal itself). The simulated `int8_wa` of E1 was already close (lag-1 cosine 0.08, ab4 2.34/2.42); the
+  real kernels are whiter.
+* **H13: supported.** The relative size grows by a factor of 4.36 from CFG 1 to CFG 4 (0.0131 to 0.0571); the error is
+  multiplied by the guidance exactly like any other prediction difference.
+
+#### E5b - Flux3-Klein INT8 at CFG 1, budgets 8 and 12, 8 units, Q and D (`results/e5_flux3_c1.md`, `..._perceptual.md`)
+
+Total error against the converged D solution (mean of 8 units):
+
+| steps | method | Q (real INT8) | D (dequantized) |
+| --- | --- | --- | --- |
+| 8 | euler | 0.642 | 0.644 |
+| 8 | ab2 | 0.647 | 0.647 |
+| 8 | ab3 | **0.627** | **0.628** |
+| 8 | ab4 | 0.817 | 0.818 |
+| 8 | wls8 | 0.722 | 0.722 |
+| 8 | dynamic | 0.636 | 0.637 |
+| 8 | dpmpp2m | 0.657 | 0.654 |
+| 12 | euler | 0.529 | 0.528 |
+| 12 | ab2 | 0.474 | 0.477 |
+| 12 | ab3 | **0.460** | **0.465** |
+| 12 | ab4 | 0.515 | 0.517 |
+| 12 | wls8 | 0.508 | 0.512 |
+| 12 | dynamic | 0.471 | 0.473 |
+| 12 | dpmpp2m | 0.483 | 0.488 |
+
+* **The real INT8 kernels add nothing measurable at CFG 1.** The extra total error Q - D is between -0.005 and +0.001 for all
+  eight methods at both budgets and every paired interval includes 0. The floor (converged Q against converged D) is
+  0.097 (se 0.021) in latent RMS but only LPIPS 0.014 / SSIM 0.982 in image space.
+* **H14: not supported at CFG 1**: (ab4 extra) - (wls8 extra) = -0.0007 [-0.0067, +0.0066] at 8 steps and +0.0010
+  [-0.0059, +0.0080] at 12. The CFG 4 arm decides H14 (pending at the time of writing).
+* **Sampler ranking replicates the E4 picture at CFG 1**: history rules beat Euler at 12 steps (ab3 -0.070 [-0.136,
+  -0.010], the only interval excluding 0; ab2 -0.055, dynamic -0.059, wls5 -0.055, dpmpp2m -0.046, all with intervals that
+  just include 0), AB-4 and WLS-8 are worse at 8 steps (+0.175 and +0.080, intervals exclude 0). Image metrics agree:
+  LPIPS at 12 steps 0.146 (ab3), 0.157 (ab2, dynamic), 0.197 (euler), 0.217 (wls8); SSIM 0.788 (ab3) against 0.744 (euler).
+  H15 for this arm: euler is not worse than wls8 in 2 of 4 (mode, budget) pairs (only at 8 steps).
