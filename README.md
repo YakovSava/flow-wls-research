@@ -641,17 +641,17 @@ Total error (reference 160 steps; the 64-step reference gives the same numbers t
 ### Corrected conclusions after E4-E6
 
 1. **The best simple rule depends on guidance, and it is not Euler.** With strong guidance (Anima CFG 3-5, Flux3 CFG 4) the best rules
-   are AB-2 and, from about 16 steps, DPM++ 2M: they beat Euler in 12 of 12 Anima cells and are level with or better than it
-   on Flux3. Without guidance (distilled Flux3 and Krea 2 at CFG 1, Anima CFG 1) orders 3-4 and the dynamic rule are
+   are AB-2 and, from about 16-24 steps, DPM++ 2M: AB-2 beats Euler in 12 of 12 Anima cells, DPM++ 2M at 24 steps, and both are
+   level with or better than it on Flux3. Without guidance (distilled Flux3 and Krea 2 at CFG 1, Anima CFG 1) orders 3-4 and the dynamic rule are
    better than Euler. In no model and at no budget up to 12 steps are AB-4 or the long-window WLS-8/WLS-5 the best choice
-   (Anima 8 and 12 steps: WLS-8 is worse than Euler in every one of 6 CFG/budget cells at CFG >= 3).
+   (Anima at 8 and 12 steps: WLS-8 is worse than Euler in all 6 CFG/budget cells, in 5 of them with intervals that exclude 0).
 2. **Mechanism, measured:** the guided velocity is a smooth trend plus a step-to-step uncorrelated jitter whose relative size is
    about 1% at CFG 1, 4% at CFG 3, 6-7% at CFG 5; the guidance term `s (v_c - v_u)` is the part that is redrawn at every
    step. Rules with large weights amplify it (white-noise gain 1.06 AB-2, 1.21 AB-3, 1.97 AB-4); rules that
    reduce the bias of Euler gain from it only when the jitter is small. No constant-weight linear history filter fitted to
    the data (K <= 4) improves on the best existing rule by more than 3.4%.
 3. **Quantization is secondary to this.** The real INT8 kernels produce a white error of 1.3% (CFG 1) to 5.7% (CFG 4) of the velocity
-   norm; its effect on the final latent is below 0.02 for every method on Flux3 (floor 0.10-0.16 in latent RMS, LPIPS 0.014-0.029 in
+   norm; its effect on the final latent is about 0.02 or less for every method on Flux3 (floor 0.10-0.16 in latent RMS, LPIPS 0.014-0.029 in
    image space), and the choice of the sampler changes the error by 0.05-0.8. AB-4 is hurt the most by the INT8 noise
    (+0.017, +0.022 at CFG 4) but its own excess error (+0.5 to +0.8) dwarfs it. The picture of E1/E2' (simulated 8-bit
    formats: AB-4 hurt, WLS-8 robust) is confirmed in direction and much weaker in size for the real kernels.
