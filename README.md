@@ -589,9 +589,9 @@ Total error against the converged D solution (mean of 4 units):
   (ab4 extra) - (wls8 extra) = +0.0106 [-0.0215, +0.0442] at 8 steps and +0.0245 [-0.0016, +0.0401] at 12. The direction
   is the predicted one, but both intervals include 0, so **H14 is not supported by its criterion** (borderline at 12
   steps), and the size of the effect is two orders of magnitude below the excess error of AB-4 itself (+0.82 at 8
-  steps). The floor (converged Q against converged D) is 0.159 (se 0.062). Compared with E2' (simulated INT8 W+A on
+  steps). The floor (converged Q against converged D) is 0.159 (se 0.062) in latent RMS, LPIPS 0.029 / SSIM 0.969 in image space. Compared with E2' (simulated INT8 W+A on
   Anima: AB-4 extra +0.46 at 8 steps) the real kernels act far more weakly, which fits their measured size (rel. 1.3-5.7%
-  against 8-17% for the simulated formats).
+  against 5.6-19.6% for the simulated formats of E1).
 * **Ranking at CFG 4 is the CFG 5 picture of Anima**, on another architecture: AB-4 (+0.82, +0.49), WLS-8 (+0.48, +0.20),
   WLS-5 (+0.19, +0.15) and the dynamic rule (+0.15, +0.10) are significantly worse than Euler; AB-2 (-0.007 at 8,
   -0.022 [-0.036, -0.004] at 12 steps) and DPM++ 2M (-0.012, -0.013, inconclusive) are level with or slightly better than
