@@ -15,8 +15,6 @@ What we found, on four flow-matching models (Anima, Flux3-Klein, Krea 2, Moss-Im
 
 What we did not show: human preference (LPIPS is distance to a many-step image), more than four prompts and four models, or anything about SDXL-type models. Adams-Bashforth 2 is not new; the contribution is the measurement and a negative result for our own idea.
 
-The code is a ComfyUI custom node that adds flow_ab2 / flow_ab3 to the normal sampler list. The code and the analysis were prepared with an AI assistant (Claude), and every number is reproducible from the repository.
-
 Preprint: https://doi.org/10.5281/zenodo.23939696
 Code: https://github.com/YakovSava/flow-wls-research
 

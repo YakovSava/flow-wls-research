@@ -24,8 +24,6 @@ What this is not: LPIPS is a distance to a many-step image, not a beauty score, 
 Repo with all tables and the image grids: https://github.com/YakovSava/flow-wls-research
 Write-up: https://doi.org/10.5281/zenodo.23939696
 
-If you have a prompt or model where it breaks, tell me; that is the most useful feedback I can get. The code and analysis were done with an AI assistant (Claude); the numbers are reproducible from the repo.
-
 ---
 
 ## 2. r/MachineLearning
@@ -50,8 +48,6 @@ If you have a prompt or model where it breaks, tell me; that is the most useful 
 
 Code, tables, figures: https://github.com/YakovSava/flow-wls-research
 Preprint: https://doi.org/10.5281/zenodo.23939696
-
-The code and analysis were prepared with an AI assistant (Claude). Methodological criticism is welcome, especially on the choice of reference and on the accumulated-error surrogate we used to interpret the fitted filters.
 
 ---
 

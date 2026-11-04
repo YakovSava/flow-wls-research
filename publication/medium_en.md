@@ -70,9 +70,5 @@ The repository is a ComfyUI custom node. It adds `flow_ab2`, `flow_ab3` and `flo
 - Adams-Bashforth 2 and DPM++ 2M were added to part of the experiments after the first results. The write-up marks which.
 - Adams-Bashforth 2 is not new. The contribution is the measurement, and a negative result for our own idea.
 
-## A note on how this was made
-
-The code and the analysis were prepared together with an AI assistant (Claude). Every number here comes from files in the repository's `results/` folder and can be regenerated with its scripts, and the mistakes we found along the way are recorded in the README. If you have a prompt or a model where this breaks, we would like to hear about it.
-
 Code, tables and figures: https://github.com/YakovSava/flow-wls-research
 Preprint: https://doi.org/10.5281/zenodo.23939696
