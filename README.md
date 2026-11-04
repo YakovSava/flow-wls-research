@@ -521,7 +521,7 @@ Total error against the converged D solution (mean of 8 units):
 | 12 | dynamic | 0.471 | 0.473 |
 | 12 | dpmpp2m | 0.483 | 0.488 |
 
-* **The real INT8 kernels add nothing measurable at CFG 1.** The extra total error Q - D is between -0.005 and +0.001 for all
+* **The real INT8 kernels add nothing measurable at CFG 1.** The extra total error Q - D is between -0.005 and +0.003 for all
   eight methods at both budgets and every paired interval includes 0. The floor (converged Q against converged D) is
   0.097 (se 0.021) in latent RMS but only LPIPS 0.014 / SSIM 0.982 in image space.
 * **H14: not supported at CFG 1**: (ab4 extra) - (wls8 extra) = -0.0007 [-0.0067, +0.0066] at 8 steps and +0.0010
