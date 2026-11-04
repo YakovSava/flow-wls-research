@@ -408,8 +408,10 @@ Verdicts on the registered hypotheses:
 * **H9 (the guidance term is rougher than the conditional prediction): supported, 8 of 8 units in every one of
   the 12 (CFG, budget) rows.** At CFG 5 the second-difference ratio of `s (v_c - v_u)` is 0.28-0.31 against
   0.0009-0.0048 for `v_c`, and its relative change between consecutive steps is 0.88-1.12 (the term is essentially
-  re-drawn at every step) against 0.05-0.13. At CFG 1 the unconditional branch was evaluated by the tap and its
-  "guidance share" (11.9) is not interpretable; I did not trace why.
+  re-drawn at every step) against 0.05-0.13. At CFG 1 the tap also evaluates the unconditional branch, which the sampler does not use; at the last evaluation
+  (sigma = 0.009) its velocity norm is 22081 against 238 for the conditional one (off-manifold prediction divided by a tiny
+  sigma), which produces the mean "guidance share" of 11.9 in `results/e4_diag_anima.md`. It is an artefact of an unused branch at
+  the last step, not an error of the pipeline (checked on one unit; the first seven steps give a share of 0.45-1.6 at CFG 1).
 * **H10 (observed orders): second part supported, first part refuted narrowly.** Euler's observed order is 0.61-0.69
   (+- 0.05-0.10), just under the registered band 0.7-1.3; ab3 0.76 (CFG 5), 1.04-1.05 (CFG 1, 3); wls5 0.52 (CFG 5),
   0.91-1.07; ab4 1.4-1.6. No rule reaches its nominal order in the 8-24 step range.
