@@ -686,9 +686,13 @@ per picture, no selection of the best seed was made; the number on a tile is LPI
   (LPIPS 0.15 for all); only WLS-8 at 8 steps breaks the face (0.34). For this model there is no reason to leave Euler.
 * `grid_krea2_face_cfg1.jpg` (Krea 2 INT8): at 12 steps Euler gives smooth, airbrushed skin (LPIPS 0.34), while AB-2 (0.30),
   DPM++ 2M (0.27) and AB-3 (0.21) bring back pores and freckles; at 8 steps nothing helps.
-* `grid_anima_face_cfg5.jpg`, `grid_anima_fur_cfg5.jpg` (Anima, CFG 5): at 8-16 steps every method gives a different picture from the
-  96-step reference (LPIPS 0.6-0.8 for all), so the small LPIPS differences between Euler, AB-2 and DPM++ are not visible
-  to the eye; what is visible is that AB-3 and WLS-8 break the image at 8 steps and that Euler is the softest.
+* `grid_anima_face_cfg5.jpg` (Anima, CFG 5): at 8-16 steps every method gives a different picture from the 96-step
+  reference (LPIPS 0.6-0.8 for all), so the small LPIPS differences between Euler, AB-2 and DPM++ are not visible to the eye;
+  what is visible is that AB-3 and WLS-8 break the face at 8 steps and that Euler is the softest.
+* `grid_anima_fur_cfg5.jpg` (Anima, CFG 5, a texture-heavy prompt) is the clearest effect of all: at 8 steps Euler leaves an
+  almost black noise image (LPIPS 0.89), AB-3 as well (0.73) and WLS-8 a blurred blob (0.97), while DPM++ 2M (0.35) and AB-2
+  (0.42) deliver a complete picture; at 16 steps DPM++ 2M (0.20), AB-3 (0.21) and AB-2 (0.23) are visibly richer than Euler (0.34),
+  which stays dark and under-detailed.
 
 What can be claimed for a user: avoid the high-order and long-window rules at low step counts; at CFG 3 or more AB-2 and
 DPM++ 2M are at least as good as Euler and sharper on some models; for a distilled model Euler is already fine and AB-3 can
