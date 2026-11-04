@@ -289,7 +289,7 @@ activation-quantized formats.
    at all four budgets (the largest deviation is an improvement, nvfp4_w at 8 steps). But it is robust at a price: it is **worse than plain Euler** in 27 of 28
    (format x budget) cells and worse than AB-3 as well, with or without quantization. The robustness is
    the bounded noise gain, not better accuracy. At 8 and 12 steps on this model, in this metric, Euler is
-   the best of the six rules for every format; AB-3 pulls slightly ahead only at 16 steps for the formats
+   the best of these six rules for every format (E4 later showed that AB-2, which was not in this set, beats it); AB-3 pulls slightly ahead only at 16 steps for the formats
    without activation quantization.
 3. A dynamic regularization chosen by rolling-origin validation (no extra network calls) is competitive
    with the best fixed multistep rule (null result for H5, regret up to 10%) and better than it at some
@@ -601,3 +601,66 @@ Total error against the converged D solution (mean of 4 units):
 * **The dependence on CFG found in E4 is reproduced on a second architecture and a real quantized model**: at CFG 1
   (E5b) history rules beat Euler and the best is AB-3; at CFG 4 the best are AB-2 and DPM++ 2M and everything of higher
   order or with a long window loses.
+
+#### E5e - Moss-Image INT8 at CFG 4, 512x512, budgets 8 and 12, 8 units, Q only (`results/e5_moss_c4.md`, `..._ref64.md`)
+
+**The reference does not converge for this model**, so only large effects can be read. On the checked unit wls5 at
+64 steps and at 160 steps differ by 32%, ab3 at 64 and at 160 steps by 17%, and ab3 against wls5 at 160 steps by 35%
+(64 steps: 22%). The solution keeps changing with the step count; "distance to the converged solution" is not
+well defined here. Two reference lengths were run (64 steps: `*_ref64.md`; 160 steps: `e5_moss_c4.md`).
+
+Total error (reference 160 steps; the 64-step reference gives the same numbers to within 0.01):
+
+| steps | euler | ab2 | ab3 | ab4 | wls5 | wls8 | dynamic | dpmpp2m |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 8 | 0.665 | 0.673 | **0.663** | 0.971 | 0.741 | 0.855 | 0.685 | 0.691 |
+| 12 | 0.572 | 0.552 | 0.553 | 0.621 | 0.582 | 0.620 | 0.559 | **0.552** |
+
+* Robust: AB-4 (+0.306 [+0.267, +0.348] at 8 steps, +0.049 at 12) and WLS-8 (+0.190 at 8, +0.048 at 12) are worse than
+  Euler, identically for both reference lengths (+0.313 and +0.197 with the 64-step reference). Everything else is
+  within +-0.03 of Euler and inside the reference uncertainty: ab2, ab3, dynamic and dpmpp2m at 12 steps are 0.013-0.020
+  better, with intervals that include 0. LPIPS at 12 steps (160-step reference) puts dpmpp2m (0.195), ab2 (0.200) and ab3
+  (0.202) ahead of dynamic (0.216), wls5 (0.237), ab4 (0.242), euler (0.243) and wls8 (0.298).
+* H15 for this arm: Euler is not worse than WLS-8 in 2 of 2 budgets (the margin is large: 0.665 against 0.855 and 0.572
+  against 0.620).
+
+### Summary of the follow-up (E4-E6) against the registered hypotheses
+
+| # | Verdict | Evidence in one line |
+| --- | --- | --- |
+| H7 | supported | Anima: best of ab3/dynamic beats Euler at CFG 1 at every budget, not at CFG 5; Flux3 shows the same CFG dependence (CFG 1: ab3 best, CFG 4: ab2/dpmpp2m best, order >= 3 loses) |
+| H8 | half supported | worse than holding at CFG 5 (0-4% of steps better); at CFG 1 still worse for quadratic rules up to 24 steps; the one-step metric is not a usable surrogate |
+| H9 | supported | guidance term re-drawn at every step: relative change 0.88-1.12, second-difference ratio 0.28-0.31 against 0.001-0.005 for the conditional part, 8 of 8 units in every row |
+| H10 | partly refuted | Euler order 0.61-0.69 (registered 0.7-1.3); ab3 and wls5 stay below 1.5 |
+| H11 | supported | DPM++ 2M not better than Euler at CFG 5 and <= 12 steps; better from 24 steps; Heun at equal NFE never better |
+| H12 | supported | real INT8 error: lag-1 cosine -0.001, realised = white-noise accumulation |
+| H13 | supported | size grows 4.36x from CFG 1 to CFG 4 |
+| H14 | not supported | CFG 1: -0.0007 and +0.0010 (intervals include 0); CFG 4: +0.0106 and +0.0245, direction as predicted, intervals include 0 |
+| H15 | supported | Euler not worse than WLS-8 in 20 of 24 (model, mode, CFG, budget) cells: Anima 10/12, Flux3 CFG 1 2/4, Flux3 CFG 4 4/4, Krea2 2/2, Moss 2/2 |
+
+### Corrected conclusions after E4-E6
+
+1. **The best simple rule depends on guidance, and it is not Euler.** With strong guidance (Anima CFG 3-5, Flux3 CFG 4) the best rules
+   are AB-2 and, from about 16 steps, DPM++ 2M: they beat Euler in 12 of 12 Anima cells and are level with or better than it
+   on Flux3. Without guidance (distilled Flux3 and Krea 2 at CFG 1, Anima CFG 1) orders 3-4 and the dynamic rule are
+   better than Euler. In no model and at no budget up to 12 steps are AB-4 or the long-window WLS-8/WLS-5 the best choice
+   (Anima 8 and 12 steps: WLS-8 is worse than Euler in every one of 6 CFG/budget cells at CFG >= 3).
+2. **Mechanism, measured:** the guided velocity is a smooth trend plus a step-to-step uncorrelated jitter whose relative size is
+   about 1% at CFG 1, 4% at CFG 3, 6-7% at CFG 5; the guidance term `s (v_c - v_u)` is the part that is redrawn at every
+   step. Rules with large weights amplify it (white-noise gain 1.06 AB-2, 1.21 AB-3, 1.97 AB-4); rules that
+   reduce the bias of Euler gain from it only when the jitter is small. No constant-weight linear history filter fitted to
+   the data (K <= 4) improves on the best existing rule by more than 3.4%.
+3. **Quantization is secondary to this.** The real INT8 kernels produce a white error of 1.3% (CFG 1) to 5.7% (CFG 4) of the velocity
+   norm; its effect on the final latent is below 0.02 for every method on Flux3 (floor 0.10-0.16 in latent RMS, LPIPS 0.014-0.029 in
+   image space), and the choice of the sampler changes the error by 0.05-0.8. AB-4 is hurt the most by the INT8 noise
+   (+0.017, +0.022 at CFG 4) but its own excess error (+0.5 to +0.8) dwarfs it. The picture of E1/E2' (simulated 8-bit
+   formats: AB-4 hurt, WLS-8 robust) is confirmed in direction and much weaker in size for the real kernels.
+4. **No new flow_wls-class sampler is justified by these data.** The family contains the optimum of its class to within about 3%, and the
+   winners are low-order rules that exist already (AB-2, DPM++ 2M). A practical recommendation that follows from the
+   measurements, not from a proof: for a CFG-guided quantized model use AB-2 or DPM++ 2M; for a distilled model without guidance AB-3.
+
+Limits of E4-E6: four models but one prompt set (4 prompts x 2 seeds, 8 units; 4 units for Flux3 CFG 4), 8-24 steps
+only, the "converged" reference is not converged for Moss and only roughly for Flux3 at CFG 4 (20-34%), no D arm for
+Moss and Krea 2 (kernel effect measured on Flux3 only), the INT8 weights are those of the checkpoints (their rounding error
+against an unknown bf16 original is not measured), `ab2` and `dpmpp2m` entered the E5 stages post hoc, and image metrics
+are taken against the decoded reference, not against human judgement.
