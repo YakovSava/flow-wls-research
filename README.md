@@ -1,6 +1,12 @@
 # Flow-WLS under Quantization: Does a Multistep Sampler Survive FP8 / INT4 Velocity Errors?
 
-> **Status: protocol registered, experiments running.** This section was written on 2026-11-03
+**Languages:** **English** · [Русский](README.ru.md) · [中文](README.zh.md) · [Марий](README.mhr.md)
+
+Preprint: [10.5281/zenodo.23939696](https://doi.org/10.5281/zenodo.23939696). The translations are short summaries; this file is the full record and the authoritative one.
+
+**Status at publication (2026-11-04): all experiments, including the follow-up E4-E6, are finished; results start at the section "Results". The registered protocol below is kept unchanged.**
+
+> **Status when written: protocol registered, experiments running.** This section was written on 2026-11-03
 > *before* any real-model measurement. Results are appended below it as they come in and nothing
 > above the line "Results" is edited afterwards except to fix typos.
 
@@ -590,7 +596,7 @@ Total error against the converged D solution (mean of 4 units):
 * **Kernel effect and H14.** The extra error of the real INT8 path is small and is largest for AB-4 (+0.017, +0.022);
   (ab4 extra) - (wls8 extra) = +0.0106 [-0.0215, +0.0442] at 8 steps and +0.0245 [-0.0016, +0.0401] at 12. The direction
   is the predicted one, but both intervals include 0, so **H14 is not supported by its criterion** (borderline at 12
-  steps), and the size of the effect is two orders of magnitude below the excess error of AB-4 itself (+0.82 at 8
+  steps), and the size of the effect is more than an order of magnitude below the excess error of AB-4 itself (+0.82 at 8
   steps). The floor (converged Q against converged D) is 0.159 (se 0.062) in latent RMS, LPIPS 0.029 / SSIM 0.969 in image space. Compared with E2' (simulated INT8 W+A on
   Anima: AB-4 extra +0.46 at 8 steps) the real kernels act far more weakly, which fits their measured size (rel. 1.3-5.7%
   against 5.6-19.6% for the simulated formats of E1).
