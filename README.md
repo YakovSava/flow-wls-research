@@ -698,3 +698,11 @@ What can be claimed for a user: avoid the high-order and long-window rules at lo
 DPM++ 2M are at least as good as Euler and sharper on some models; for a distilled model Euler is already fine and AB-3 can
 return some texture. What cannot be claimed: that the pictures are "better" to a human eye (no preference test was done,
 LPIPS measures distance to a many-step image) or that it holds for other prompts and checkpoints (4 prompts, 4 models).
+
+**Dropdown samplers.** On start the package also adds `flow_ab2`, `flow_ab3` and `flow_ab4` (Adams-Bashforth of order 2, 3 and
+4 on the sigma schedule, no extra model evaluations) to the standard `sampler_name` list, so they appear in KSampler,
+KSampler (Advanced) and `KSamplerSelect` next to `euler` and `dpmpp_2m`; restart ComfyUI after updating the folder. Checked as
+ComfyUI loads the package: the three names are present in `comfy.samplers.KSampler.SAMPLERS`, and sampling through
+`comfy.samplers.sampler_object(name)` reproduces the cached E4 latents with a maximum absolute difference of 0.0. Use
+`flow_ab2` for CFG 3 and above and `flow_ab3` for distilled models at CFG 1; `flow_ab4` is there for experiments and was the
+worst choice at 8-12 steps in every model tested.
