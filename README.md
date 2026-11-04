@@ -531,3 +531,33 @@ Total error against the converged D solution (mean of 8 units):
   just include 0), AB-4 and WLS-8 are worse at 8 steps (+0.175 and +0.080, intervals exclude 0). Image metrics agree:
   LPIPS at 12 steps 0.146 (ab3), 0.157 (ab2, dynamic), 0.197 (euler), 0.217 (wls8); SSIM 0.788 (ab3) against 0.744 (euler).
   H15 for this arm: euler is not worse than wls8 in 2 of 4 (mode, budget) pairs (only at 8 steps).
+
+#### E5c - Krea 2 INT8 (ConvRot), CFG 1, 512x512, 8 units, Q only (`results/e5_krea2_c1.md`, `..._perceptual.md`)
+
+No D arm: the bf16-dequantized weights of this 12 GB INT8 model do not fit the machine, so the kernel effect cannot be
+separated and this arm only tests sampler rankings on a real INT8 model. Reference convergence (ab3 against wls5 at 64
+steps, one unit): 5.2%.
+
+| steps | method | total error | LPIPS | SSIM |
+| --- | --- | --- | --- | --- |
+| 8 | euler | 0.525 | 0.342 | - |
+| 8 | ab2 | 0.538 | 0.312 | - |
+| 8 | ab3 | 0.503 | 0.304 | - |
+| 8 | ab4 | 0.621 | 0.366 | - |
+| 8 | wls8 | 0.637 | 0.391 | - |
+| 8 | dynamic | **0.498** | 0.307 | - |
+| 12 | euler | 0.431 | 0.245 | 0.661 |
+| 12 | ab2 | 0.453 | 0.225 | 0.673 |
+| 12 | ab3 | 0.421 | **0.204** | **0.695** |
+| 12 | ab4 | 0.483 | 0.236 | 0.649 |
+| 12 | wls8 | 0.469 | 0.249 | 0.619 |
+| 12 | dynamic | **0.416** | **0.204** | 0.680 |
+| 12 | dpmpp2m | 0.447 | 0.219 | 0.685 |
+
+* Paired contrasts against Euler (latent RMS): at 8 steps ab3 -0.022 [-0.044, -0.002] and dynamic -0.027 [-0.051,
+  -0.002] are better, ab4 +0.096 and wls8 +0.112 are worse (intervals exclude 0); at 12 steps every interval includes 0
+  (half-widths of 0.05-0.10 with this unit-to-unit spread). In image space the ordering is clearer: LPIPS at 12 steps
+  0.204 for ab3 and dynamic against 0.245 for Euler, 0.249 for wls8.
+* The pattern is the one of Flux3 at CFG 1 (distilled model, little guidance): AB-3 and the dynamic rule are at
+  least as good as Euler, AB-4 and WLS-8 are not; AB-2 shows no gain here (+0.013, +0.022, inconclusive). H15 for this
+  arm: Euler is not worse than WLS-8 in 2 of 2 budgets.

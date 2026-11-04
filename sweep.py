@@ -15,7 +15,7 @@ history_filter = module("history_filter")
 
 REFERENCE_METHOD: str = "wls5"
 CONVERGENCE_METHOD: str = "ab3"
-REFERENCE_STEPS: dict[str, int] = {"anima": 96}
+REFERENCE_STEPS: dict[str, int] = {"anima": 96, "moss": 160}
 DEFAULT_REFERENCE_STEPS: int = 64
 TRUTH_MODES: dict[str, str] = {"flux3": "d"}
 LEGACY_CELL: tuple[str, str, float] = ("anima", "bf16", 5.0)
